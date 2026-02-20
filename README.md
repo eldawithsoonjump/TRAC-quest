@@ -1,81 +1,95 @@
-# Intercom
+# ⚔️ TracQuest — On-Chain Quest Board
 
-This repository is a reference implementation of the **Intercom** stack on Trac Network for an **internet of agents**.
+> A peer-to-peer gamified quest board built on top of [Intercom](https://github.com/Trac-Systems/intercom) — the Trac Network's P2P agent sidechain protocol.
 
-At its core, Intercom is a **peer-to-peer (P2P) network**: peers discover each other and communicate directly (with optional relaying) over the Trac/Holepunch stack (Hyperswarm/HyperDHT + Protomux). There is no central server required for sidechannel messaging.
-
-Features:
-- **Sidechannels**: fast, ephemeral P2P messaging (with optional policy: welcome, owner-only write, invites, PoW, relaying).
-- **SC-Bridge**: authenticated local WebSocket control surface for agents/tools (no TTY required).
-- **Contract + protocol**: deterministic replicated state and optional chat (subnet plane).
-- **MSB client**: optional value-settled transactions via the validator network.
-
-Additional references: https://www.moltbook.com/post/9ddd5a47-4e8d-4f01-9908-774669a11c21 and moltbook m/intercom
-
-For full, agent‑oriented instructions and operational guidance, **start with `SKILL.md`**.  
-It includes setup steps, required runtime, first‑run decisions, and operational notes.
-
-## Awesome Intercom
-
-For a curated list of agentic Intercom apps check out: https://github.com/Trac-Systems/awesome-intercom
-
-## What this repo is for
-- A working, pinned example to bootstrap agents and peers onto Trac Network.
-- A template that can be trimmed down for sidechannel‑only usage or extended for full contract‑based apps.
-
-## How to use
-Use the **Pear runtime only** (never native node).  
-Follow the steps in `SKILL.md` to install dependencies, run the admin peer, and join peers correctly.
-
-## Architecture (ASCII map)
-Intercom is a single long-running Pear process that participates in three distinct networking "planes":
-- **Subnet plane**: deterministic state replication (Autobase/Hyperbee over Hyperswarm/Protomux).
-- **Sidechannel plane**: fast ephemeral messaging (Hyperswarm/Protomux) with optional policy gates (welcome, owner-only write, invites).
-- **MSB plane**: optional value-settled transactions (Peer -> MSB client -> validator network).
-
-```text
-                          Pear runtime (mandatory)
-                pear run . --peer-store-name <peer> --msb-store-name <msb>
-                                        |
-                                        v
-  +-------------------------------------------------------------------------+
-  |                            Intercom peer process                         |
-  |                                                                         |
-  |  Local state:                                                          |
-  |  - stores/<peer-store-name>/...   (peer identity, subnet state, etc)    |
-  |  - stores/<msb-store-name>/...    (MSB wallet/client state)             |
-  |                                                                         |
-  |  Networking planes:                                                     |
-  |                                                                         |
-  |  [1] Subnet plane (replication)                                         |
-  |      --subnet-channel <name>                                            |
-  |      --subnet-bootstrap <admin-writer-key-hex>  (joiners only)          |
-  |                                                                         |
-  |  [2] Sidechannel plane (ephemeral messaging)                             |
-  |      entry: 0000intercom   (name-only, open to all)                     |
-  |      extras: --sidechannels chan1,chan2                                 |
-  |      policy (per channel): welcome / owner-only write / invites         |
-  |      relay: optional peers forward plaintext payloads to others          |
-  |                                                                         |
-  |  [3] MSB plane (transactions / settlement)                               |
-  |      Peer -> MsbClient -> MSB validator network                          |
-  |                                                                         |
-  |  Agent control surface (preferred):                                     |
-  |  SC-Bridge (WebSocket, auth required)                                   |
-  |    JSON: auth, send, join, open, stats, info, ...                       |
-  +------------------------------+------------------------------+-----------+
-                                 |                              |
-                                 | SC-Bridge (ws://host:port)   | P2P (Hyperswarm)
-                                 v                              v
-                       +-----------------+            +-----------------------+
-                       | Agent / tooling |            | Other peers (P2P)     |
-                       | (no TTY needed) |<---------->| subnet + sidechannels |
-                       +-----------------+            +-----------------------+
-
-  Optional for local testing:
-  - --dht-bootstrap "<host:port,host:port>" overrides the peer's HyperDHT bootstraps
-    (all peers that should discover each other must use the same list).
-```
+**TracQuest** transforms Intercom's P2P sidechannels into a living, decentralized quest board where adventurers can post bounties, claim quests, and earn TNK rewards — all coordinated over the network without a central server.
 
 ---
-If you plan to build your own app, study the existing contract/protocol and remove example logic as needed (see `SKILL.md`).
+
+## 🎮 What is TracQuest?
+
+TracQuest is a **GameFi / task board** application built as a fork of Intercom. It lets users:
+
+- **Post Quests** — Commission on-chain tasks with a TNK reward (combat, crafting, exploration, trading, puzzle, social, bounty categories)
+- **Claim Quests** — Adventurers stake their Trac address to claim and attempt a quest
+- **Submit Proof** — Complete quests and submit evidence (screenshots, TX IDs, links) to unlock TNK
+- **Guild Leaderboard** — Track top adventurers by quests completed and TNK earned
+- **Live P2P Sync** — Quest state is broadcast over Intercom sidechannels to all connected peers
+
+---
+
+## 🚀 How to Run
+
+```bash
+# Clone this fork
+git clone https://github.com/YOUR_USERNAME/intercom.git
+cd intercom
+
+# Open the quest board UI
+open index.html
+# OR serve locally:
+npx serve .
+```
+
+No build step required. The app runs as a single `index.html` with vanilla JS.
+
+---
+
+## 🗺 App Architecture
+
+```
+TracQuest
+├── index.html          # Full app UI (quest board, leaderboard, identity)
+├── SKILL.md            # Agent skill instructions
+├── README.md           # This file
+└── intercom/           # Upstream Intercom P2P layer (fork base)
+```
+
+**Intercom integration:**
+- Quest posts and claims are broadcast as messages over Intercom P2P sidechannels
+- Each quest state change (open → claimed → completed) is replicated to connected peers
+- Trac addresses are used as identity anchors for payout routing
+- The replicated-state layer stores the canonical quest registry across nodes
+
+---
+
+## 💡 Quest Ranks
+
+| Rank | Difficulty | Typical Reward |
+|------|-----------|----------------|
+| D | Common | 100–500 TNK |
+| C | Uncommon | 300–800 TNK |
+| B | Rare | 500–2000 TNK |
+| A | Epic | 1000–5000 TNK |
+| S | Legendary | 5000+ TNK |
+
+---
+
+## 🖼 Screenshots
+
+> *(<img width="1287" height="772" alt="image" src="https://github.com/user-attachments/assets/7460f015-7bb3-42ea-a25f-d0946e4525d7" />
+)*
+
+---
+
+## 💰 Trac Address (for TNK Payouts)
+
+```
+trac1vqfp53zr37gqsskeq9vp7qe4reqneqheumqy3e8728ke8x3xl94scu6207
+```
+
+> **Replace `trac1vqfp53zr37gqsskeq9vp7qe4reqneqheumqy3e8728ke8x3xl94scu6207` with your actual Trac address before submitting.**
+
+---
+
+## 🔗 Links
+
+- **Upstream Intercom:** https://github.com/Trac-Systems/intercom
+- **Awesome Intercom List:** https://github.com/Trac-Systems/awesome-intercom
+- **Trac Network:** https://trac.network
+
+---
+
+## 📜 License
+
+MIT — fork freely, build boldly.
