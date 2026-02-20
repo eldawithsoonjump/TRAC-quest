@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ TracQuest — On-Chain Quest Board</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #f0b429;
+    --gold-dark: #b8860b;
+    --gold-glow: #ffd700;
+    --bg: #0a0805;
+    --bg2: #120f08;
+    --bg3: #1a1508;
+    --panel: #16120a;
+    --border: #3a2e0f;
+    --border-gold: #7a5c10;
+    --text: #e8d5a3;
+    --text-dim: #8a7450;
+    --red: #c0392b;
+    --green: #27ae60;
+    --blue: #2980b9;
+    --purple: #8e44ad;
+    --cyan: #16a085;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Cinzel', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: default;
+  }
+
+  /* Animated starfield background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse at 20% 50%, rgba(240,180,41,0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(139,69,19,0.05) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Grid texture overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(240,180,41,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(240,180,41,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    text-align: center;
+    padding: 40px 20px 30px;
+    position: relative;
+  }
+
+  .header-rune {
+    font-size: 11px;
+    letter-spacing: 8px;
+    color: var(--gold-dark);
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+    margin-bottom: 12px;
+    opacity: 0.7;
+  }
+
+  h1 {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: clamp(28px, 5vw, 52px);
+    background: linear-gradient(135deg, #f0b429 0%, #ffd700 40%, #b8860b 70%, #f0b429 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(240,180,41,0.4));
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .header-line {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dark), var(--gold), var(--gold-dark), transparent);
+    margin: 24px 0;
+    position: relative;
+  }
+  .header-line::before {
+    content: '⚔';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%,-50%);
+    background: var(--bg);
+    padding: 0 12px;
+    color: var(--gold);
+    font-size: 16px;
+  }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+
+  .stat-pill {
+    background: var(--panel);
+    border: 1px solid var(--border-gold);
+    border-radius: 4px;
+    padding: 8px 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: pulse-border 3s infinite;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { border-color: var(--border-gold); }
+    50% { border-color: var(--gold); box-shadow: 0 0 8px rgba(240,180,41,0.2); }
+  }
+
+  .stat-value { color: var(--gold); font-size: 15px; font-weight: bold; }
+  .stat-label { color: var(--text-dim); }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-gold);
+  }
+
+  .tab {
+    padding: 12px 28px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: var(--text-dim);
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    top: 1px;
+  }
+
+  .tab:hover { color: var(--gold); }
+
+  .tab.active {
+    background: var(--panel);
+    border-color: var(--border-gold);
+    border-bottom-color: var(--panel);
+    color: var(--gold);
+  }
+
+  /* ── SECTION LAYOUTS ── */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── QUEST FORM ── */
+  .quest-form {
+    background: var(--panel);
+    border: 1px solid var(--border-gold);
+    border-radius: 6px;
+    padding: 28px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .quest-form::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .form-title {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--gold-dark);
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+    margin-bottom: 20px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  input, textarea, select {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 10px 14px;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--gold-dark);
+    box-shadow: 0 0 0 2px rgba(240,180,41,0.08);
+  }
+
+  textarea { resize: vertical; min-height: 80px; }
+
+  select option { background: var(--bg2); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #3a2e0f, #5a4510);
+    border: 1px solid var(--gold-dark);
+    border-radius: 3px;
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(240,180,41,0.1));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn:hover {
+    border-color: var(--gold);
+    box-shadow: 0 0 16px rgba(240,180,41,0.25), inset 0 0 16px rgba(240,180,41,0.05);
+    color: var(--gold-glow);
+    transform: translateY(-1px);
+  }
+
+  .btn:hover::before { opacity: 1; }
+  .btn:active { transform: translateY(0); }
+
+  .btn-sm {
+    padding: 7px 16px;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  .btn-danger { border-color: #7a1515; color: #e74c3c; background: linear-gradient(135deg, #1a0808, #2a0f0f); }
+  .btn-danger:hover { border-color: #e74c3c; box-shadow: 0 0 12px rgba(231,76,60,0.3); color: #ff6b6b; }
+  .btn-success { border-color: #1a5c2e; color: #2ecc71; background: linear-gradient(135deg, #081a0d, #0f2a17); }
+  .btn-success:hover { border-color: #2ecc71; box-shadow: 0 0 12px rgba(46,204,113,0.3); color: #55ff99; }
+  .btn-info { border-color: #1a3a5c; color: #3498db; background: linear-gradient(135deg, #08101a, #0f1f2a); }
+  .btn-info:hover { border-color: #3498db; box-shadow: 0 0 12px rgba(52,152,219,0.3); color: #66bbff; }
+
+  /* ── QUEST BOARD ── */
+  .board-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .board-title {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .filter-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    padding: 5px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    border-color: var(--gold-dark);
+    color: var(--gold);
+    background: rgba(240,180,41,0.05);
+  }
+
+  /* ── QUEST CARD ── */
+  .quests-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .quest-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: start;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .quest-card:hover {
+    border-color: var(--border-gold);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(240,180,41,0.05);
+    transform: translateX(2px);
+  }
+
+  .quest-card.claimed { border-left: 3px solid var(--blue); }
+  .quest-card.completed { border-left: 3px solid var(--green); opacity: 0.7; }
+  .quest-card.open { border-left: 3px solid var(--gold-dark); }
+
+  .quest-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+  }
+
+  .rank-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    border: 1px solid;
+  }
+
+  .rank-S { background: rgba(139,0,139,0.15); border-color: #8b008b; }
+  .rank-A { background: rgba(255,69,0,0.12); border-color: #ff4500; }
+  .rank-B { background: rgba(30,144,255,0.12); border-color: #1e90ff; }
+  .rank-C { background: rgba(0,128,0,0.12); border-color: #008000; }
+  .rank-D { background: rgba(128,128,128,0.12); border-color: #808080; }
+
+  .quest-info { min-width: 0; }
+
+  .quest-name {
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 6px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .quest-desc {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+
+  .quest-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    border: 1px solid;
+  }
+
+  .tag-type { color: var(--text-dim); border-color: var(--border); }
+  .tag-status-open { color: var(--gold-dark); border-color: var(--gold-dark); background: rgba(240,180,41,0.06); }
+  .tag-status-claimed { color: var(--blue); border-color: var(--blue); background: rgba(41,128,185,0.06); }
+  .tag-status-completed { color: var(--green); border-color: var(--green); background: rgba(39,174,96,0.06); }
+
+  .quest-meta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .quest-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+
+  .reward-display {
+    text-align: right;
+    margin-bottom: 4px;
+  }
+
+  .reward-amount {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: 18px;
+    color: var(--gold);
+    display: block;
+    filter: drop-shadow(0 0 6px rgba(240,180,41,0.3));
+  }
+
+  .reward-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* ── LEADERBOARD ── */
+  .leaderboard {
+    background: var(--panel);
+    border: 1px solid var(--border-gold);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .leaderboard::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .lb-header {
+    display: grid;
+    grid-template-columns: 60px 1fr 100px 100px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .lb-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 100px 100px;
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(58,46,15,0.4);
+    align-items: center;
+    transition: background 0.15s;
+  }
+
+  .lb-row:hover { background: rgba(240,180,41,0.03); }
+  .lb-row:last-child { border-bottom: none; }
+
+  .lb-rank {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: 16px;
+    color: var(--text-dim);
+  }
+
+  .lb-rank.gold { color: #ffd700; }
+  .lb-rank.silver { color: #c0c0c0; }
+  .lb-rank.bronze { color: #cd7f32; }
+
+  .lb-player { font-family: 'Share Tech Mono', monospace; font-size: 13px; }
+  .lb-quests { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--text-dim); }
+  .lb-tnk { font-family: 'Cinzel', serif; font-size: 13px; color: var(--gold); }
+
+  /* ── WALLET / IDENTITY ── */
+  .identity-panel {
+    background: var(--panel);
+    border: 1px solid var(--border-gold);
+    border-radius: 6px;
+    padding: 28px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .identity-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .identity-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  .identity-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .identity-value {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    word-break: break-all;
+  }
+
+  /* ── TOAST ── */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    background: var(--panel);
+    border: 1px solid var(--border-gold);
+    border-radius: 4px;
+    padding: 12px 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    max-width: 300px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes toastOut {
+    to { opacity: 0; transform: translateX(20px); }
+  }
+
+  .toast.success { border-color: var(--green); }
+  .toast.error { border-color: var(--red); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+  }
+
+  .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--gold-dark);
+    border-radius: 6px;
+    padding: 32px;
+    max-width: 480px;
+    width: 100%;
+    position: relative;
+    animation: modalIn 0.25s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal h3 {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: 16px;
+    color: var(--gold);
+    margin-bottom: 20px;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  .modal-close:hover { color: var(--text); }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 24px 0;
+  }
+
+  /* ── GLOW EFFECT ON SPECIAL ITEMS ── */
+  @keyframes glow-pulse {
+    0%, 100% { filter: drop-shadow(0 0 4px rgba(240,180,41,0.3)); }
+    50% { filter: drop-shadow(0 0 12px rgba(240,180,41,0.6)); }
+  }
+
+  .glowing { animation: glow-pulse 2s infinite; }
+
+  /* ── CONNECTED INDICATOR ── */
+  .connection-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: blink 2s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+    .quest-card { grid-template-columns: auto 1fr; }
+    .quest-actions { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }
+    .lb-header, .lb-row { grid-template-columns: 40px 1fr 80px; }
+    .lb-tnk { display: none; }
+    .identity-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- HEADER -->
+  <header>
+    <div class="header-rune">✦ Trac Network · Intercom P2P · On-Chain Questing ✦</div>
+    <h1>TracQuest</h1>
+    <div class="subtitle">Decentralized Quest Board · Powered by Intercom</div>
+    <div class="header-line"></div>
+  </header>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-pill">
+      <span class="stat-value" id="stat-open">0</span>
+      <span class="stat-label">Open Quests</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-value" id="stat-claimed">0</span>
+      <span class="stat-label">In Progress</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-value" id="stat-completed">0</span>
+      <span class="stat-label">Completed</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-value" id="stat-tnk">0</span>
+      <span class="stat-label">TNK Pooled</span>
+    </div>
+    <div class="stat-pill">
+      <span class="connection-status">
+        <span class="dot"></span>
+        <span id="peer-count">0</span> Peers
+      </span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('board')">⚔ Quest Board</button>
+    <button class="tab" onclick="switchTab('post')">+ Post Quest</button>
+    <button class="tab" onclick="switchTab('guild')">🏆 Guild Ranks</button>
+    <button class="tab" onclick="switchTab('identity')">◈ Identity</button>
+  </div>
+
+  <!-- ── BOARD ── -->
+  <div class="section active" id="section-board">
+    <div class="board-header">
+      <div class="board-title">⧖ Active Quest Board</div>
+      <div class="filter-group">
+        <button class="filter-btn active" onclick="filterQuests('all', this)">All</button>
+        <button class="filter-btn" onclick="filterQuests('open', this)">Open</button>
+        <button class="filter-btn" onclick="filterQuests('claimed', this)">Claimed</button>
+        <button class="filter-btn" onclick="filterQuests('completed', this)">Completed</button>
+      </div>
+    </div>
+    <div class="quests-grid" id="quests-list"></div>
+  </div>
+
+  <!-- ── POST QUEST ── -->
+  <div class="section" id="section-post">
+    <div class="quest-form">
+      <div class="form-title">◈ Commission a New Quest</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Quest Name</label>
+          <input type="text" id="q-name" placeholder="e.g. Slay the Gas Dragon" maxlength="60">
+        </div>
+        <div class="form-group">
+          <label>Quest Type</label>
+          <select id="q-type">
+            <option value="combat">⚔ Combat</option>
+            <option value="crafting">🔨 Crafting</option>
+            <option value="exploration">🗺 Exploration</option>
+            <option value="trading">💰 Trading</option>
+            <option value="social">🤝 Social</option>
+            <option value="puzzle">🧩 Puzzle</option>
+            <option value="bounty">☠ Bounty</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Rank (Difficulty)</label>
+          <select id="q-rank">
+            <option value="D">D — Common</option>
+            <option value="C">C — Uncommon</option>
+            <option value="B" selected>B — Rare</option>
+            <option value="A">A — Epic</option>
+            <option value="S">S — Legendary</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>TNK Reward</label>
+          <input type="number" id="q-reward" placeholder="e.g. 500" min="1" max="999999">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>Quest Description</label>
+          <textarea id="q-desc" placeholder="Describe the objective, lore, and how completion will be verified..."></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>Your Trac Address (poster)</label>
+          <input type="text" id="q-poster" placeholder="trac1q..." readonly>
+        </div>
+      </div>
+      <button class="btn" onclick="postQuest()">⚔ Commission Quest →</button>
+    </div>
+  </div>
+
+  <!-- ── GUILD RANKS ── -->
+  <div class="section" id="section-guild">
+    <div class="leaderboard">
+      <div class="lb-header">
+        <div>#</div>
+        <div>Adventurer</div>
+        <div>Quests</div>
+        <div>TNK Earned</div>
+      </div>
+      <div id="leaderboard-body"></div>
+    </div>
+  </div>
+
+  <!-- ── IDENTITY ── -->
+  <div class="section" id="section-identity">
+    <div class="identity-panel">
+      <div class="form-title">◈ Your Adventurer Identity</div>
+      <div class="identity-grid">
+        <div class="identity-field">
+          <label>Adventurer Name</label>
+          <input type="text" id="id-name" placeholder="Choose your alias..." oninput="saveIdentity()">
+        </div>
+        <div class="identity-field">
+          <label>Trac Address (for TNK payouts)</label>
+          <input type="text" id="id-trac" placeholder="trac1q..." oninput="saveIdentity()">
+        </div>
+        <div class="identity-field">
+          <label>Quests Completed</label>
+          <div class="identity-value" id="id-completed">0</div>
+        </div>
+        <div class="identity-field">
+          <label>TNK Earned</label>
+          <div class="identity-value" id="id-tnk">0 TNK</div>
+        </div>
+        <div class="identity-field">
+          <label>Guild Rank</label>
+          <div class="identity-value glowing" id="id-rank">Novice</div>
+        </div>
+        <div class="identity-field">
+          <label>Intercom Peer ID</label>
+          <div class="identity-value" id="id-peer" style="font-size:10px; word-break:break-all;">Connecting...</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:20px;">
+      <button class="btn btn-danger btn-sm" onclick="resetData()">⚠ Reset Local Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLAIM MODAL -->
+<div class="modal-overlay" id="claim-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>Claim Quest</h3>
+    <p style="color:var(--text-dim); font-family:'Share Tech Mono',monospace; font-size:12px; margin-bottom:20px;" id="modal-quest-name"></p>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>Your Trac Address</label>
+      <input type="text" id="modal-trac" placeholder="trac1q..." readonly>
+    </div>
+    <div class="form-group" style="margin-bottom:20px;">
+      <label>Message to Quest Poster (optional)</label>
+      <textarea id="modal-msg" placeholder="Introduce yourself or ask for details..." style="min-height:70px;"></textarea>
+    </div>
+    <button class="btn btn-info" onclick="confirmClaim()">⚔ Claim This Quest</button>
+  </div>
+</div>
+
+<!-- SUBMIT PROOF MODAL -->
+<div class="modal-overlay" id="proof-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>Submit Proof</h3>
+    <p style="color:var(--text-dim); font-family:'Share Tech Mono',monospace; font-size:12px; margin-bottom:20px;" id="proof-quest-name"></p>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>Proof / Evidence (URL, description, or TX hash)</label>
+      <textarea id="proof-text" placeholder="https://screenshot.link or describe completion..." style="min-height:80px;"></textarea>
+    </div>
+    <button class="btn btn-success" onclick="confirmProof()">✓ Submit Proof</button>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state = {
+  identity: { name: '', trac: '', completed: 0, tnk: 0 },
+  quests: [],
+  filter: 'all',
+  activeModal: null,
+  selectedQuestId: null,
+  peerCount: Math.floor(Math.random() * 12) + 3,
+};
+
+const RANK_EMOJI = { S:'⭐', A:'🔥', B:'💎', C:'🌿', D:'🗡' };
+const TYPE_EMOJI = {
+  combat:'⚔', crafting:'🔨', exploration:'🗺', trading:'💰',
+  social:'🤝', puzzle:'🧩', bounty:'☠'
+};
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+  // Load stored data
+  const saved = localStorage.getItem('tracquest_state');
+  if (saved) {
+    try { const parsed = JSON.parse(saved); state.identity = parsed.identity; state.quests = parsed.quests; }
+    catch(e) {}
+  }
+
+  // Seed demo quests if empty
+  if (state.quests.length === 0) seedQuests();
+
+  // Populate identity fields
+  document.getElementById('id-name').value = state.identity.name;
+  document.getElementById('id-trac').value = state.identity.trac;
+  document.getElementById('q-poster').value = state.identity.trac || generatePseudoAddress();
+
+  updateIdentityDisplay();
+  renderQuests();
+  renderLeaderboard();
+  updateStats();
+  simulatePeerActivity();
+
+  // Fake peer ID
+  document.getElementById('id-peer').textContent = 'peer-' + Math.random().toString(36).substr(2, 16);
+  document.getElementById('peer-count').textContent = state.peerCount;
+}
+
+function seedQuests() {
+  const samples = [
+    { name: 'Defeat the Mempool Dragon', type: 'combat', rank: 'S', reward: 5000, desc: 'Clear 100 unconfirmed transactions from the mempool by submitting valid TXs within a single block window. Proof: show the block hash.', status: 'open', poster: 'trac1qexample001', claimer: null, proof: null },
+    { name: 'Map the Dark Chain Caverns', type: 'exploration', rank: 'A', reward: 1200, desc: 'Discover and document 5 previously unlisted UTXO sets on the Trac testnet. Provide addresses + balances as proof.', status: 'open', poster: 'trac1qexample002', claimer: null, proof: null },
+    { name: 'Craft the Golden Node', type: 'crafting', rank: 'B', reward: 800, desc: 'Run a full Trac node for 7 days uninterrupted and provide your node stats as proof.', status: 'claimed', poster: 'trac1qexample003', claimer: 'trac1qexample099', proof: null },
+    { name: 'Trade 1000 TNK for Lore Shards', type: 'trading', rank: 'C', reward: 300, desc: 'Execute a valid swap on IntercomSwap and share the TX ID.', status: 'completed', poster: 'trac1qexample004', claimer: 'trac1qexample077', proof: 'txid:abc123...completed swap screenshot' },
+    { name: 'Recruit a New Adventurer', type: 'social', rank: 'D', reward: 150, desc: 'Get a new user to fork the Intercom repo and include their Trac address in README. Share their GitHub link.', status: 'open', poster: 'trac1qexample005', claimer: null, proof: null },
+    { name: 'Solve the Hash Puzzle', type: 'puzzle', rank: 'A', reward: 2500, desc: 'Find the nonce that produces a SHA-256 hash starting with 0000 for the string "TracQuest#1". First valid answer wins.', status: 'open', poster: 'trac1qexample006', claimer: null, proof: null },
+    { name: 'Bounty: Find the Lost Wallet', type: 'bounty', rank: 'B', reward: 999, desc: 'Help trace and recover funds from trac1q0000lost... Follow chain clues left in OP_RETURN outputs. First to crack it wins.', status: 'open', poster: 'trac1qexample007', claimer: null, proof: null },
+  ];
+
+  state.quests = samples.map((q, i) => ({ ...q, id: 'q_' + i + '_' + Date.now(), ts: Date.now() - (i * 3600000) }));
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderQuests() {
+  const container = document.getElementById('quests-list');
+  const filtered = state.filter === 'all' ? state.quests : state.quests.filter(q => q.status === state.filter);
+  
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🗡</div>No quests found. Be the first to post one!</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(q => questCardHTML(q)).join('');
+}
+
+function questCardHTML(q) {
+  const myTrac = state.identity.trac;
+  const isMyQuest = myTrac && q.poster === myTrac;
+  const isClaimer = myTrac && q.claimer === myTrac;
+
+  let actions = '';
+  if (q.status === 'open' && !isMyQuest) {
+    actions = `<button class="btn btn-info btn-sm" onclick="openClaimModal('${q.id}')">Claim ⚔</button>`;
+  } else if (q.status === 'claimed' && isClaimer) {
+    actions = `<button class="btn btn-success btn-sm" onclick="openProofModal('${q.id}')">Submit Proof ✓</button>`;
+  } else if (q.status === 'completed') {
+    actions = `<span style="color:var(--green); font-family:'Share Tech Mono',monospace; font-size:11px;">✓ Complete</span>`;
+  } else {
+    actions = `<span style="color:var(--text-dim); font-family:'Share Tech Mono',monospace; font-size:11px;">${q.status}</span>`;
+  }
+
+  const statusTag = `<span class="tag tag-status-${q.status}">${q.status.toUpperCase()}</span>`;
+  const timeAgo = getTimeAgo(q.ts);
+
+  return `
+    <div class="quest-card ${q.status}">
+      <div class="rank-badge rank-${q.rank}" title="Rank ${q.rank}">
+        ${RANK_EMOJI[q.rank]}
+      </div>
+      <div class="quest-info">
+        <div class="quest-name">${TYPE_EMOJI[q.type]} ${escHtml(q.name)}</div>
+        <div class="quest-desc">${escHtml(q.desc.substring(0, 120))}${q.desc.length > 120 ? '...' : ''}</div>
+        <div class="quest-tags">
+          ${statusTag}
+          <span class="tag tag-type">${q.type}</span>
+          <span class="tag tag-type">Rank ${q.rank}</span>
+          <span class="tag tag-type" style="color:var(--text-dim)">⏱ ${timeAgo}</span>
+        </div>
+      </div>
+      <div class="quest-actions">
+        <div class="reward-display">
+          <span class="reward-amount">${q.reward.toLocaleString()}</span>
+          <span class="reward-label">TNK Reward</span>
+        </div>
+        ${actions}
+        <span style="font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--text-dim); margin-top:4px;">
+          By: ${q.poster.substring(0,12)}...
+        </span>
+      </div>
+    </div>
+  `;
+}
+
+function renderLeaderboard() {
+  const body = document.getElementById('leaderboard-body');
+  
+  // Build leaderboard from completed quests + local identity
+  const players = {};
+  state.quests.forEach(q => {
+    if (q.status === 'completed' && q.claimer) {
+      if (!players[q.claimer]) players[q.claimer] = { address: q.claimer, quests: 0, tnk: 0 };
+      players[q.claimer].quests++;
+      players[q.claimer].tnk += q.reward;
+    }
+  });
+
+  // Add local identity
+  if (state.identity.trac && state.identity.completed > 0) {
+    const k = state.identity.trac;
+    if (!players[k]) players[k] = { address: k, quests: 0, tnk: 0, name: state.identity.name };
+    players[k].quests = Math.max(players[k].quests, state.identity.completed);
+    players[k].tnk = Math.max(players[k].tnk, state.identity.tnk);
+    players[k].name = state.identity.name;
+  }
+
+  // Add some demo players
+  const demos = [
+    { address: 'trac1qexample099', quests: 7, tnk: 4200, name: 'DragonSlayer' },
+    { address: 'trac1qexample077', quests: 5, tnk: 2100, name: 'ChainWalker' },
+    { address: 'trac1qexample033', quests: 3, tnk: 1500, name: 'Void Mage' },
+    { address: 'trac1qexample055', quests: 2, tnk: 850, name: 'IronForge' },
+    { address: 'trac1qexample011', quests: 1, tnk: 300, name: 'NoviceHunter' },
+  ];
+  demos.forEach(d => { if (!players[d.address]) players[d.address] = d; });
+
+  const sorted = Object.values(players).sort((a,b) => b.tnk - a.tnk).slice(0, 20);
+  const rankClass = ['gold', 'silver', 'bronze'];
+
+  body.innerHTML = sorted.map((p, i) => `
+    <div class="lb-row">
+      <div class="lb-rank ${rankClass[i] || ''}">${i < 3 ? ['🥇','🥈','🥉'][i] : '#' + (i+1)}</div>
+      <div class="lb-player">
+        <div style="color:var(--text)">${escHtml(p.name || p.address.substring(0,12) + '...')}</div>
+        <div style="color:var(--text-dim); font-size:10px;">${p.address.substring(0,16)}...</div>
+      </div>
+      <div class="lb-quests">${p.quests} ⚔</div>
+      <div class="lb-tnk">${p.tnk.toLocaleString()} TNK</div>
+    </div>
+  `).join('');
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const open = state.quests.filter(q => q.status === 'open').length;
+  const claimed = state.quests.filter(q => q.status === 'claimed').length;
+  const completed = state.quests.filter(q => q.status === 'completed').length;
+  const tnk = state.quests.reduce((s, q) => s + q.reward, 0);
+  
+  animateNum('stat-open', open);
+  animateNum('stat-claimed', claimed);
+  animateNum('stat-completed', completed);
+  animateNum('stat-tnk', tnk);
+}
+
+function animateNum(id, target) {
+  const el = document.getElementById(id);
+  const cur = parseInt(el.textContent.replace(/,/g,'')) || 0;
+  if (cur === target) return;
+  const step = Math.ceil(Math.abs(target - cur) / 10);
+  const dir = target > cur ? 1 : -1;
+  let v = cur;
+  const iv = setInterval(() => {
+    v += dir * step;
+    if ((dir > 0 && v >= target) || (dir < 0 && v <= target)) { v = target; clearInterval(iv); }
+    el.textContent = v.toLocaleString();
+  }, 30);
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('section-' + tab).classList.add('active');
+  if (tab === 'guild') renderLeaderboard();
+}
+
+// ─── FILTER ───────────────────────────────────────────────────────────────────
+function filterQuests(f, btn) {
+  state.filter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderQuests();
+}
+
+// ─── POST QUEST ───────────────────────────────────────────────────────────────
+function postQuest() {
+  const name = document.getElementById('q-name').value.trim();
+  const type = document.getElementById('q-type').value;
+  const rank = document.getElementById('q-rank').value;
+  const reward = parseInt(document.getElementById('q-reward').value);
+  const desc = document.getElementById('q-desc').value.trim();
+  const poster = state.identity.trac || generatePseudoAddress();
+
+  if (!name) return toast('Quest name is required', 'error');
+  if (!desc) return toast('Quest description is required', 'error');
+  if (!reward || reward < 1) return toast('Reward must be at least 1 TNK', 'error');
+  if (!poster) return toast('Set your Trac address in Identity first', 'error');
+
+  const q = { id: 'q_' + Date.now(), name, type, rank, reward, desc, poster, status: 'open', claimer: null, proof: null, ts: Date.now() };
+  state.quests.unshift(q);
+  saveState();
+  updateStats();
+  
+  // Clear form
+  document.getElementById('q-name').value = '';
+  document.getElementById('q-desc').value = '';
+  document.getElementById('q-reward').value = '';
+
+  toast('⚔ Quest commissioned! It is now live on the board.', 'success');
+  switchTabDirect('board');
+  renderQuests();
+}
+
+function switchTabDirect(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['board', 'post', 'guild', 'identity'];
+    t.classList.toggle('active', names[i] === tab);
+  });
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + tab).classList.add('active');
+}
+
+// ─── CLAIM MODAL ──────────────────────────────────────────────────────────────
+function openClaimModal(id) {
+  state.selectedQuestId = id;
+  const q = state.quests.find(q => q.id === id);
+  document.getElementById('modal-quest-name').textContent = `"${q.name}" — ${q.reward} TNK`;
+  document.getElementById('modal-trac').value = state.identity.trac || '';
+  document.getElementById('modal-msg').value = '';
+  document.getElementById('claim-modal').classList.add('open');
+}
+
+function confirmClaim() {
+  const q = state.quests.find(q => q.id === state.selectedQuestId);
+  if (!q) return;
+  const trac = state.identity.trac;
+  if (!trac) { toast('Set your Trac address in Identity first', 'error'); return; }
+
+  q.status = 'claimed';
+  q.claimer = trac;
+  closeModal();
+  saveState();
+  updateStats();
+  renderQuests();
+  toast(`⚔ Quest claimed! Complete it and submit proof to earn ${q.reward} TNK`, 'success');
+}
+
+// ─── PROOF MODAL ──────────────────────────────────────────────────────────────
+function openProofModal(id) {
+  state.selectedQuestId = id;
+  const q = state.quests.find(q => q.id === id);
+  document.getElementById('proof-quest-name').textContent = `"${q.name}" — ${q.reward} TNK`;
+  document.getElementById('proof-text').value = '';
+  document.getElementById('proof-modal').classList.add('open');
+}
+
+function confirmProof() {
+  const proof = document.getElementById('proof-text').value.trim();
+  if (!proof) { toast('Please provide proof of completion', 'error'); return; }
+
+  const q = state.quests.find(q => q.id === state.selectedQuestId);
+  if (!q) return;
+
+  q.status = 'completed';
+  q.proof = proof;
+
+  // Award to local identity
+  state.identity.completed++;
+  state.identity.tnk += q.reward;
+
+  closeModal();
+  saveState();
+  updateStats();
+  updateIdentityDisplay();
+  renderQuests();
+  renderLeaderboard();
+  toast(`🏆 Quest completed! ${q.reward} TNK will be sent to your Trac address.`, 'success');
+}
+
+function closeModal() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+}
+
+// ─── IDENTITY ─────────────────────────────────────────────────────────────────
+function saveIdentity() {
+  state.identity.name = document.getElementById('id-name').value;
+  state.identity.trac = document.getElementById('id-trac').value;
+  document.getElementById('q-poster').value = state.identity.trac;
+  updateIdentityDisplay();
+  saveState();
+}
+
+function updateIdentityDisplay() {
+  document.getElementById('id-completed').textContent = state.identity.completed;
+  document.getElementById('id-tnk').textContent = state.identity.tnk.toLocaleString() + ' TNK';
+
+  const ranks = [
+    [0, 'Novice'], [3, 'Apprentice'], [7, 'Journeyman'], [15, 'Expert'],
+    [30, 'Master'], [50, 'Grand Master'], [100, 'Legendary']
+  ];
+  let rank = 'Novice';
+  for (const [threshold, r] of ranks) {
+    if (state.identity.completed >= threshold) rank = r;
+  }
+  document.getElementById('id-rank').textContent = rank;
+}
+
+function resetData() {
+  if (!confirm('Reset all local quest and identity data?')) return;
+  localStorage.removeItem('tracquest_state');
+  location.reload();
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function saveState() {
+  localStorage.setItem('tracquest_state', JSON.stringify({ identity: state.identity, quests: state.quests }));
+}
+
+function generatePseudoAddress() {
+  return 'trac1q' + Math.random().toString(36).substr(2, 30);
+}
+
+function getTimeAgo(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+  return Math.floor(diff/86400000) + 'd ago';
+}
+
+function escHtml(str) {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+function toast(msg, type = '') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ─── SIMULATE LIVE P2P ────────────────────────────────────────────────────────
+function simulatePeerActivity() {
+  // Randomly fluctuate peer count (simulate P2P)
+  setInterval(() => {
+    state.peerCount = Math.max(1, state.peerCount + Math.floor(Math.random() * 3) - 1);
+    document.getElementById('peer-count').textContent = state.peerCount;
+  }, 4000);
+
+  // Occasionally show "new quest received over P2P" toast
+  const p2pEvents = [
+    'New quest posted by trac1q8f2a... over P2P',
+    'Peer trac1q3d9c... claimed a quest',
+    '5 new peers joined the network',
+    'Quest completed — TNK payout broadcast',
+    'IntercomSwap sync: 12 trades processed',
+  ];
+  let idx = 0;
+  setInterval(() => {
+    if (Math.random() < 0.3) {
+      toast('📡 ' + p2pEvents[idx % p2pEvents.length]);
+      idx++;
+    }
+  }, 12000);
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) closeModal(); });
+});
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
